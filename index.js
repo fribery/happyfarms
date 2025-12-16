@@ -91,9 +91,14 @@ bot.on('successful_payment', async (msg) => {
 //Обработчик вебхука
 
 app.post('/', (req, res) => {
+  try {
   console.log('Received webhook update');
   bot.processUpdate(req.body); // Передаем данные обновления боту
   res.sendStatus(200); // Отвечаем Telegram, что все получили
+  } catch (error) {
+    console.error('Ошибка в обработчике вебхука:', error);
+    res.sendStatus(500);
+  }
 });
 
 // API-роут для фронтенда: получить данные пользователя
@@ -110,6 +115,15 @@ app.post('/api/user-data', async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// Добавьте этот маршрут ПЕРЕД app.listen()
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'Farm bot API', 
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // Запуск сервера
