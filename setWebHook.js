@@ -7,7 +7,7 @@ const token = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new TelegramBot(token);
 
 // ВАЖНО: замените на ваш реальный домен из Railway!
-const RAILWAY_DOMAIN = 'happyfarms-production.up.railway.app';
+const RAILWAY_DOMAIN = 'https://happyfarms-production.up.railway.app';
 const WEBHOOK_PATH = '/bot-webhook';
 const webhookUrl = RAILWAY_DOMAIN + WEBHOOK_PATH;
 
