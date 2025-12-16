@@ -151,7 +151,7 @@ app.post('/bot-webhook', (req, res) => {
 });
 
 // ==================== 10. ЗАПУСК СЕРВЕРА ====================
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log('🚀 Сервер запущен на порту ${PORT}');
     console.log('🔗 Health Check: http://localhost:${PORT}/');
     console.log('📨 Вебхук: /bot-webhook');
