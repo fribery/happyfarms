@@ -88,19 +88,6 @@ bot.on('successful_payment', async (msg) => {
 });
 // --- КОНЕЦ ОБРАБОТКИ ПЛАТЕЖЕЙ ---
 
-//Обработчик вебхука
-
-app.post('/', (req, res) => {
-  try {
-  console.log('Received webhook update');
-  bot.processUpdate(req.body); // Передаем данные обновления боту
-  res.sendStatus(200); // Отвечаем Telegram, что все получили
-  } catch (error) {
-    console.error('Ошибка в обработчике вебхука:', error);
-    res.sendStatus(500);
-  }
-});
-
 // API-роут для фронтенда: получить данные пользователя
 app.post('/api/user-data', async (req, res) => {
   // ВАЖНО: Здесь необходимо проверить подлинность данных из Telegram (initData),
@@ -117,13 +104,31 @@ app.post('/api/user-data', async (req, res) => {
   }
 });
 
-// Добавьте этот маршрут ПЕРЕД app.listen()
-app.get('/', (req, res) => {
+// Health Check для Railway (GET-запрос)
+app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    message: 'Farm bot API', 
+    message: 'Farm bot API is running', 
     timestamp: new Date().toISOString() 
   });
+});
+
+// Главная страница (опционально)
+//app.get('/', (req, res) => {
+//  res.send('<h1>Farm Bot Server</h1><p>API is running. Use Telegram bot to interact.</p>');
+//});
+
+//Обработчик вебхука
+
+app.post('/', (req, res) => {
+  try {
+  console.log('Received webhook update');
+  bot.processUpdate(req.body); // Передаем данные обновления боту
+  res.sendStatus(200); // Отвечаем Telegram, что все получили
+  } catch (error) {
+    console.error('Ошибка в обработчике вебхука:', error);
+    res.sendStatus(500);
+  }
 });
 
 // Запуск сервера

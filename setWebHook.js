@@ -6,7 +6,7 @@ const token = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new TelegramBot(token);
 
 // 1. Замените YOUR_RAILWAY_URL на реальный URL вашего проекта на Railway
-const webhookUrl = 'https://happyfarms-production.up.railway.app/bot-webhook'; // Важно: добавить путь
+const webhookUrl = 'https://happyfarms-production.up.railway.app/'; // Важно: добавить путь
 
 async function setWebhook() {
   try {
