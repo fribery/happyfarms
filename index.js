@@ -8,10 +8,10 @@ app.use(express.json()); // Для чтения JSON из запросов
 
 // Подключение к Telegram Bot API
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const bot = new TelegramBot(token, { polling: true }); // Используйте webhook для продакшена
+const bot = new TelegramBot(token); // Используйте webhook для продакшена
 
 // Подключение к MongoDB (замените ссылку)
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(process.env.MONGO_URL)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log(err));
 
@@ -88,6 +88,14 @@ bot.on('successful_payment', async (msg) => {
 });
 // --- КОНЕЦ ОБРАБОТКИ ПЛАТЕЖЕЙ ---
 
+//Обработчик вебхука
+
+app.post('/', (req, res) => {
+  console.log('Received webhook update');
+  bot.processUpdate(req.body); // Передаем данные обновления боту
+  res.sendStatus(200); // Отвечаем Telegram, что все получили
+});
+
 // API-роут для фронтенда: получить данные пользователя
 app.post('/api/user-data', async (req, res) => {
   // ВАЖНО: Здесь необходимо проверить подлинность данных из Telegram (initData),
@@ -108,4 +116,5 @@ app.post('/api/user-data', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Backend server is running on port ${PORT}`);
+  console.log('Webhook URL: happyfarms-production.up.railway.app/bot-webhook')
 });
