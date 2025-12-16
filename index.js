@@ -4,177 +4,171 @@ const TelegramBot = require('node-telegram-bot-api');
 const mongoose = require('mongoose');
 
 const app = express();
-app.use(express.json()); // Для чтения JSON из запросов
+app.use(express.json());
 
-// Генерируем уникальный ID для этого запуска контейнера
-const containerId = Math.random().toString(36).substring(7);
-console.log('🚀 [DEBUG] НОВЫЙ КОНТЕЙНЕР ЗАПУСКАЕТСЯ. ID: ${containerId}');
-
-// Подключение к Telegram Bot API
+// ============ 1. КОНФИГУРАЦИЯ БОТА (РЕЖИМ WEBHOOK) ============
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const bot = new TelegramBot(token); // Используйте webhook для продакшена
+if (!token) {
+    console.error('❌ FATAL: TELEGRAM_BOT_TOKEN не найден в переменных окружения.');
+    process.exit(1);
+}
+const bot = new TelegramBot(token);
+console.log('🤖 Бот инициализирован (режим вебхука)');
 
-// Подключение к MongoDB (замените ссылку)
-mongoose.connect(process.env.MONGO_URL)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log(err));
+// ============ 2. ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ ============
+// Важно: используйте ту переменную, которую вы добавили в Railway (например, DATABASE_URL или MONGO_URL)
+const mongoUri = process.env.MONGO_URL_URL || process.env.MONGO_URL;
+if (!mongoUri) {
+    console.error('❌ FATAL: Переменная для подключения к MongoDB (DATABASE_URL/MONGO_URL) не найдена.');
+    process.exit(1);
+}
 
-// --- ОПРЕДЕЛЕНИЕ МОДЕЛЕЙ БАЗЫ ДАННЫХ (пример) ---
-const userSchema = new mongoose.Schema({
-  telegramId: { type: Number, required: true, unique: true },
-  username: String,
-  coins: { type: Number, default: 100 }, // Стартовый капитал
-  farm: {
-    vegetables: { type: Map, of: Number, default: {} }, // Например, { "carrot": 5 }
-    animals: { type: Map, of: Number, default: {} }
-  },
-  lastHarvest: Date
-});
-const User = mongoose.model('User', userSchema);
-// --- КОНЕЦ МОДЕЛЕЙ ---
+// Подключаемся к БД. Сервер запустим ПОСЛЕ успешного подключения.
+console.log('🔗 Устанавливаю соединение с MongoDB...');
+mongoose.connect(mongoUri)
+    .then(() => {
+        console.log('✅ MongoDB connected');
 
-// Команда /start для регистрации пользователя
-bot.onText(/\/start/, async (msg) => {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
+        // ============ 3. МОДЕЛЬ ПОЛЬЗОВАТЕЛЯ ============
+        const userSchema = new mongoose.Schema({
+            telegramId: { type: Number, required: true, unique: true },
+            username: String,
+            coins: { type: Number, default: 100 },
+            farm: {
+                vegetables: { type: Map, of: Number, default: {} },
+                animals: { type: Map, of: Number, default: {} }
+            },
+            lastHarvest: Date
+        });
+        const User = mongoose.model('User', userSchema);
+        console.log('📝 Модель User загружена');
 
-  try {
-    let user = await User.findOne({ telegramId: userId });
-    if (!user) {
-      user = new User({
-        telegramId: userId,
-        username: msg.from.username
-      });
-      await user.save();
-      await bot.sendMessage(chatId, `Добро пожаловать на ферму! У вас ${user.coins} монет.`);
-    } else {
-      await bot.sendMessage(chatId, `С возвращением! На вашем счету ${user.coins} монет.`);
-    }
-    // Здесь можно отправить кнопку для открытия Mini App
-    await bot.sendMessage(chatId, 'Открыть ферму', {
-      reply_markup: {
-        inline_keyboard: [[
-          { text: '🌾 Открыть ферму', web_app: { url: process.env.MINI_APP_URL } }
-        ]]
-      }
+        // ============ 4. ОБРАБОТЧИК КОМАНДЫ /START ============
+        bot.onText(/\/start/, async (msg) => {
+            const chatId = msg.chat.id;
+            const userId = msg.from.id;
+            try {
+                let user = await User.findOne({ telegramId: userId });
+                if (!user) {
+                    user = new User({
+                        telegramId: userId,
+                        username: msg.from.username
+                    });
+                    await user.save();
+                    await bot.sendMessage(chatId, 'Добро пожаловать на ферму! У вас ' + user.coins + ' монет.');
+                } else {
+                    await bot.sendMessage(chatId, 'С возвращением! На вашем счету ' + user.coins + ' монет.');
+                }
+                // Кнопка для открытия Mini App
+                await bot.sendMessage(chatId, 'Открыть ферму', {
+                    reply_markup: {
+                        inline_keyboard: [[
+                            {
+                                text: '🌾 Открыть ферму',
+                                web_app: { url: process.env.MINI_APP_URL }
+                            }
+                        ]]
+                    }
+                });
+            } catch (error) {
+                console.error('Ошибка в обработчике /start:', error);
+            }
+        });
+
+        // ============ 5. API ДЛЯ FRONTEND (MINI APP) ============
+        // Важно: В реальном приложении здесь должна быть проверка подписи initData от Telegram!
+        app.post('/api/user-data', async (req, res) => {
+            try {
+                const userId = req.body.userId;
+                const user = await User.findOne({ telegramId: userId });
+                if (user) {
+                    res.json({ success: true, user: user });
+                } else {
+                    res.status(404).json({ success: false, error: 'User not found' });
+                }
+            } catch (error) {
+                console.error('Ошибка в /api/user-data:', error);
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        // Эндпоинт для создания платежного счета (заглушка)
+        app.post('/api/create-invoice', (req, res) => {
+            console.log('Запрос на создание инвойса:', req.body);
+            // Реализуйте логику создания инвойса через bot.sendInvoice(...)
+            res.json({ success: true, message: 'Invoice endpoint (stub)' });
+        });
+
+        // Обработчик успешных платежей (заглушка)
+        bot.on('successful_payment', async (msg) => {
+            console.log('Успешный платеж:', msg.successful_payment);
+            // Реализуйте зачисление монет/предметов пользователю
+        });
+
+        // ============ 6. HEALTH CHECK (КРИТИЧЕСКИ ВАЖНО ДЛЯ RAILWAY) ============
+        app.get('/', (req, res) => {
+            console.log('✅ GET / — Health Check passed!');
+            res.json({
+                status: 'ok',
+                message: 'Farm Bot API is running',
+                timestamp: new Date().toISOString()
+            });
+        });
+
+        // ============ 7. ОБРАБОТЧИК ВЕБХУКА ОТ TELEGRAM ============
+        // Убедитесь, что в настройках вебхука в setWebhook.js указан этот путь
+        app.post('/bot-webhook', (req, res) => {
+            try {
+                console.log('📨 Получен вебхук от Telegram');
+                bot.processUpdate(req.body);
+                res.sendStatus(200);
+            } catch (error) {
+                console.error('Ошибка в обработчике вебхука:', error);
+                res.sendStatus(500);
+            }
+        });
+
+        // ============ 8. ЗАПУСК СЕРВЕРА ============
+        const PORT = process.env.PORT || 8080;
+        const server = app.listen(PORT, '0.0.0.0', () => {
+            console.log('📡 Backend server is running on port ' + PORT);
+            console.log('🌐 Локальный Health Check: http://localhost:' + PORT + '/');
+            console.log('✅ Server initialization complete.');
+        });
+
+        // ============ 9. ГРАЦИОЗНОЕ ЗАВЕРШЕНИЕ ============
+        const gracefulShutdown = () => {
+            console.log('🛑 Получен сигнал завершения, останавливаю сервер...');
+            server.close(() => {
+                console.log('Сервер остановлен.');
+                mongoose.connection.close(false, () => {
+                    console.log('Соединение с MongoDB закрыто.');
+                    process.exit(0);
+                });
+            });
+        };
+        process.on('SIGTERM', gracefulShutdown);
+        process.on('SIGINT', gracefulShutdown);
+
+        // Простой "якорь" для процесса (опционально)
+        const keepAliveInterval = setInterval(() => {
+            // Тихий интервал, чтобы процесс не завершился случайно
+        }, 60000);
+        // Очистка интервала при завершении
+        process.on('SIGTERM', () => clearInterval(keepAliveInterval));
+        process.on('SIGINT', () => clearInterval(keepAliveInterval));
+
+    })
+    .catch((err) => {
+        // Если подключение к БД не удалось, сервер НЕ запускаем
+        console.error('❌ FATAL: Ошибка подключения к MongoDB:', err.message);
+        process.exit(1);
     });
-  } catch (error) {
-    console.error(error);
-  }
-});
 
-// --- КРИТИЧЕСКИЙ МОМЕНТ: Обработка платежей Telegram Stars ---
-// 1. Создание счета (инвойса) для покупки монет/животных через Mini App
-app.post('/api/create-invoice', async (req, res) => {
-  // Здесь ваш код для создания инвойса с помощью bot.sendInvoice(...)
-  // Валюта для Stars - "XTR"[citation:8].
-  // Этот метод должен вызываться с фронтенда Mini App.
-});
-
-// 2. Подтверждение успешного платежа
-// Обработчик срабатывает, когда Telegram подтверждает оплату.
-bot.on('successful_payment', async (msg) => {
-  const userId = msg.from.id;
-  const payload = msg.successful_payment.invoice_payload; // Ваши данные: что куплено
-
-  try {
-    const user = await User.findOne({ telegramId: userId });
-    if (payload.startsWith('add_coins_')) {
-      const coinsToAdd = parseInt(payload.split('_')[2]);
-      user.coins += coinsToAdd;
-      await user.save();
-      bot.sendMessage(msg.chat.id, `На ваш счет зачислено ${coinsToAdd} монет!`);
-    }
-    // ... обработка других типов покупок (животные и т.д.)
-  } catch (error) {
-    console.error('Ошибка обработки платежа:', error);
-  }
-});
-// --- КОНЕЦ ОБРАБОТКИ ПЛАТЕЖЕЙ ---
-
-// API-роут для фронтенда: получить данные пользователя
-app.post('/api/user-data', async (req, res) => {
-  // ВАЖНО: Здесь необходимо проверить подлинность данных из Telegram (initData),
-  // используя токен бота, чтобы предотвратить подделку[citation:6].
-  const initData = req.body.initData;
-  // ... код проверки подписи ...
-
-  const userId = req.body.userId; // Извлеченный из initData ID
-  try {
-    const user = await User.findOne({ telegramId: userId });
-    res.json({ success: true, user });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Health Check (важно, чтобы он был!)
-app.get('/health', (req, res) => {
-  // Логируем, что запрос пришел
-  console.log('GOOD [${containerId}] Health Check пройден в ${new Date().toISOString()}');
-  res.json({ 
-    status: 'ok', 
-    message: 'Farm bot API is running', 
-    timestamp: new Date().toISOString(),
-    containerId: containerId // Отправляем ID обратно для проверки
-  });
-});
-
-// Главная страница (опционально)
-//app.get('/', (req, res) => {
-//  res.send('<h1>Farm Bot Server</h1><p>API is running. Use Telegram bot to interact.</p>');
-//});
-
-//Обработчик вебхука
-
-app.post('/', (req, res) => {
-  try {
-  console.log('Received webhook update');
-  bot.processUpdate(req.body); // Передаем данные обновления боту
-  res.sendStatus(200); // Отвечаем Telegram, что все получили
-  } catch (error) {
-    console.error('Ошибка в обработчике вебхука:', error);
-    res.sendStatus(500);
-  }
-});
-
-
-// ЗАПУСК СЕРВЕРА
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('📡 [${containerId}] Сервер слушает порт ${PORT}');
-});
-
-
-// =================== ИСПРАВЛЕНИЕ 1: Явный "якорь" для процесса ===================
-// Создаем интервал, который ничего не делает, но держит процесс активным.
-// Это стандартный паттерн для серверов, у которых вся работа реактивная (через запросы).
-const keepAlive = setInterval(() => {
-    // Тихое проверка, что процесс еще жив. Можно логировать раз в минуту для отладки.
-    // console.log('[Keep-Alive] Process is running...');
-}, 60000); // Проверка раз в минуту
-
-// Обрабатываем завершение, чтобы корректно очистить интервал
-process.on('SIGTERM', () => {
-    clearInterval(keepAlive);
-    console.log('SIGTERM received, shutting down gracefully.');
-    process.exit(0);
-});
-// ===============================================================================
-
-
-// =================== ИСПРАВЛЕНИЕ 2: Глобальный обработчик неотловленных ошибок ===================
-// Ловим любые ошибки, которые могли "проскользнуть" и завершить процесс.
+// ============ 10. ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ ОШИБОК ============
 process.on('uncaughtException', (error) => {
-    console.error('⚠️ CRITICAL: Uncaught Exception!', error);
-    // Даже после критической ошибки даем время записать лог перед выходом
-    setTimeout(() => process.exit(1), 1000);
+    console.error('⚠️ CRITICAL: Непойманное исключение!', error);
 });
-
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('⚠️ CRITICAL: Unhandled Promise Rejection at:', promise, 'reason:', reason);
+    console.error('⚠️ CRITICAL: Необработанный rejection промиса:', reason);
 });
-// ==============================================================================================
-
-// Простое логирование успешного старта (добавьте, если у вас этого еще нет)
-console.log('✅ Server initialization complete. Waiting for incoming requests...');

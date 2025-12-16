@@ -1,28 +1,32 @@
 // Файл: setWebhook.js
+// Запуск: node setWebhook.js (один раз после деплоя)
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new TelegramBot(token);
 
-// 1. Замените YOUR_RAILWAY_URL на реальный URL вашего проекта на Railway
-const webhookUrl = 'https://happyfarms-production.up.railway.app/'; // Важно: добавить путь
+// ВАЖНО: замените на ваш реальный домен из Railway!
+const RAILWAY_DOMAIN = 'https://happyfarms-production.up.railway.app';
+const WEBHOOK_PATH = '/bot-webhook';
+const webhookUrl = RAILWAY_DOMAIN + WEBHOOK_PATH;
 
 async function setWebhook() {
-  try {
-    // 2. Устанавливаем вебхук. Указываем публичный URL и опцию для self-signed сертификата
-    const isSet = await bot.setWebHook(webhookUrl, {
-      // Для Railway это часто необходимо
-      certificate: { source: 'inline', url: webhookUrl }
-    });
-    console.log('Вебхук установлен успешно?', isSet);
-
-    // 3. Проверяем информацию о текущем вебхуке
-    const webhookInfo = await bot.getWebHookInfo();
-    console.log('Информация о вебхуке:', JSON.stringify(webhookInfo, null, 2));
-  } catch (error) {
-    console.error('Ошибка при установке вебхука:', error.message);
-  }
+    try {
+        console.log('🔄 Устанавливаю вебхук на URL:', webhookUrl);
+        // Устанавливаем вебхук
+        const isSet = await bot.setWebHook(webhookUrl);
+        console.log('✅ Вебхук установлен?', isSet);
+        // Получаем информацию для проверки
+        const info = await bot.getWebHookInfo();
+        console.log('📊 Информация о вебхуке:');
+        console.log('   URL:', info.url || 'не установлен');
+        console.log('   Последняя ошибка:', info.last_error_message || 'нет');
+        console.log('   Кол-во обновлений в очереди:', info.pending_update_count || 0);
+    } catch (error) {
+        console.error('❌ Ошибка при установке вебхука:', error.message);
+        console.error('   Полная ошибка:', error);
+    }
 }
 
 setWebhook();
