@@ -4,7 +4,7 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start:delayed": "sleep 25 && node index.js",
+    "start:delayed": "timeout /t 25 && node index.js",
     "dev": "nodemon index.js"
   },
   "keywords": [],
