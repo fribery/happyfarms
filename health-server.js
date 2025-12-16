@@ -11,7 +11,7 @@ app.get('/', (req, res) => {
 // 2. Запускаем сервер на порту от Railway
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log('🚀 Minimal health server listening on port ${PORT}');
+    console.log('🚀 Minimal health server listening on port ' + PORT);
 });
 
 // 3. Обработчик для graceful shutdown
