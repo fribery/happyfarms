@@ -132,3 +132,37 @@ app.listen(PORT, () => {
   console.log(`Backend server is running on port ${PORT}`);
   console.log('Webhook URL: happyfarms-production.up.railway.app/bot-webhook')
 });
+
+
+// =================== ИСПРАВЛЕНИЕ 1: Явный "якорь" для процесса ===================
+// Создаем интервал, который ничего не делает, но держит процесс активным.
+// Это стандартный паттерн для серверов, у которых вся работа реактивная (через запросы).
+const keepAlive = setInterval(() => {
+    // Тихое проверка, что процесс еще жив. Можно логировать раз в минуту для отладки.
+    // console.log('[Keep-Alive] Process is running...');
+}, 60000); // Проверка раз в минуту
+
+// Обрабатываем завершение, чтобы корректно очистить интервал
+process.on('SIGTERM', () => {
+    clearInterval(keepAlive);
+    console.log('SIGTERM received, shutting down gracefully.');
+    process.exit(0);
+});
+// ===============================================================================
+
+
+// =================== ИСПРАВЛЕНИЕ 2: Глобальный обработчик неотловленных ошибок ===================
+// Ловим любые ошибки, которые могли "проскользнуть" и завершить процесс.
+process.on('uncaughtException', (error) => {
+    console.error('⚠️ CRITICAL: Uncaught Exception!', error);
+    // Даже после критической ошибки даем время записать лог перед выходом
+    setTimeout(() => process.exit(1), 1000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ CRITICAL: Unhandled Promise Rejection at:', promise, 'reason:', reason);
+});
+// ==============================================================================================
+
+// Простое логирование успешного старта (добавьте, если у вас этого еще нет)
+console.log('✅ Server initialization complete. Waiting for incoming requests...');
