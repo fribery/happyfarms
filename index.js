@@ -6,6 +6,10 @@ const mongoose = require('mongoose');
 const app = express();
 app.use(express.json()); // Для чтения JSON из запросов
 
+// Генерируем уникальный ID для этого запуска контейнера
+const containerId = Math.random().toString(36).substring(7);
+console.log('🚀 [DEBUG] НОВЫЙ КОНТЕЙНЕР ЗАПУСКАЕТСЯ. ID: ${containerId}');
+
 // Подключение к Telegram Bot API
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new TelegramBot(token); // Используйте webhook для продакшена
@@ -104,12 +108,15 @@ app.post('/api/user-data', async (req, res) => {
   }
 });
 
-// Health Check для Railway (GET-запрос)
+// Health Check (важно, чтобы он был!)
 app.get('/health', (req, res) => {
+  // Логируем, что запрос пришел
+  console.log('GOOD [${containerId}] Health Check пройден в ${new Date().toISOString()}');
   res.json({ 
     status: 'ok', 
     message: 'Farm bot API is running', 
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString(),
+    containerId: containerId // Отправляем ID обратно для проверки
   });
 });
 
@@ -131,11 +138,11 @@ app.post('/', (req, res) => {
   }
 });
 
-// Запуск сервера
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Backend server is running on port ${PORT}`);
-  console.log('Webhook URL: happyfarms-production.up.railway.app/bot-webhook')
+
+// ЗАПУСК СЕРВЕРА
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('📡 [${containerId}] Сервер слушает порт ${PORT}');
 });
 
 
