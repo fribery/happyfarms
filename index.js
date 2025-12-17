@@ -97,36 +97,33 @@ bot.onText(/\/start/, async (msg) => {
 // ==================== 7. API ДЛЯ ФРОНТЕНДА ====================
 // Эндпоинт для получения данных пользователя
 app.post('/api/user-data', async (req, res) => {
-    try {
-        const { userId } = req.body;
+  try {
+    const { userId } = req.body;
+    console.log('🔍 [API] Поиск пользователя для userId:', userId);
 
-        if (!userId) {
-            return res.status(400).json({ success: false, error: 'Требуется userId' });
-        }
+    // Пытаемся найти пользователя по telegramId (основной способ)
+    let user = await User.findOne({ telegramId: userId });
 
-        const user = await User.findOne({ telegramId: userId });
+    // Если не нашли, можно попробовать найти по другому полю,
+    // например, по username, если он передаётся вместе с userId
+    // if (!user) {
+    //   user = await User.findOne({ username: someUsername });
+    // }
 
-        if (!user) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Пользователь не найден. Напишите боту /start' 
-            });
-        }
-
-        res.json({
-            success: true,
-            user: {
-                telegramId: user.telegramId,
-                username: user.username,
-                coins: user.coins,
-                farm: user.farm
-            }
-        });
-
-    } catch (error) {
-        console.error('Ошибка в /api/user-data:', error);
-        res.status(500).json({ success: false, error: 'Ошибка сервера' });
+    if (!user) {
+      console.log('⚠️ [API] Пользователь не найден в БД по telegramId:', userId);
+      // Можно создать нового пользователя "на лету", если нужно
+      // user = new User({ telegramId: userId, coins: 100 });
+      // await user.save();
+      return res.status(404).json({ success: false, error: 'Пользователь не найден' });
     }
+
+    console.log('✅ [API] Пользователь найден:', user.telegramId);
+    res.json({ success: true, user: user });
+  } catch (error) {
+    console.error('❌ [API] Ошибка:', error);
+    res.status(500).json({ success: false, error: 'Ошибка сервера' });
+  }
 });
 
 // ==================== 8. HEALTH CHECK (ОБЯЗАТЕЛЬНО!) ====================
