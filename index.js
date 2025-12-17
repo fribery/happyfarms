@@ -132,20 +132,6 @@ console.log('🤖 Бот инициализирован');
             }
         });
 
-        // ============ 9. ГРАЦИОЗНОЕ ЗАВЕРШЕНИЕ ============
-        const gracefulShutdown = () => {
-            console.log('🛑 Получен сигнал завершения, останавливаю сервер...');
-            server.close(() => {
-                console.log('Сервер остановлен.');
-                mongoose.connection.close(false, () => {
-                    console.log('Соединение с MongoDB закрыто.');
-                    process.exit(0);
-                });
-            });
-        };
-        process.on('SIGTERM', gracefulShutdown);
-        process.on('SIGINT', gracefulShutdown);
-
         // Простой "якорь" для процесса (опционально)
         const keepAliveInterval = setInterval(() => {
             // Тихий интервал, чтобы процесс не завершился случайно
@@ -334,6 +320,20 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`📨 Вебхук: /bot-webhook`);
     console.log(`🎮 API для фронтенда: /api/user-data`);
 });
+
+// ============ 9. ГРАЦИОЗНОЕ ЗАВЕРШЕНИЕ ============
+const gracefulShutdown = () => {
+    console.log('🛑 Получен сигнал завершения, останавливаю сервер...');
+    server.close(() => {
+        console.log('Сервер остановлен.');
+        mongoose.connection.close(false, () => {
+            console.log('Соединение с MongoDB закрыто.');
+            process.exit(0);
+        });
+    });
+};
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 // ==================== 11. ОБРАБОТКА ОШИБОК ====================
 process.on('unhandledRejection', (reason, promise) => {
