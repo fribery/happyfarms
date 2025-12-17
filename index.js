@@ -253,7 +253,7 @@ app.get('/api/user-data', (req, res) => {
       });
     }
   });
-  
+
 // ==== ДОБАВЬТЕ ЭТОТ КОД ПОСЛЕ ВЕБХУКА ====
 app.post('/api/user-data', async (req, res) => {
     try {
@@ -290,6 +290,8 @@ app.post('/api/user-data', async (req, res) => {
       res.status(500).json({ success: false, error: 'Ошибка сервера' });
     }
   });
+
+app.use('/api', userRoutes);
 
   // API для фронтенда
 app.post('/api/user-data', async (req, res) => {
