@@ -322,12 +322,12 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 });
 
 // ============ 9. ГРАЦИОЗНОЕ ЗАВЕРШЕНИЕ ============
-const gracefulShutdown = () => {
+const gracefulShutdown = async () => { // ← Добавлено async
     console.log('🛑 Получен сигнал завершения, останавливаю сервер...');
-    server.close(async () => {
+    server.close(async () => { // ← Добавлено async
       console.log('Сервер остановлен.');
       try {
-        await mongoose.connection.close(); // ← БЕЗ колбэка, с await
+        await mongoose.connection.close(); // ← Исправленная строка
         console.log('✅ Соединение с MongoDB закрыто.');
       } catch (err) {
         console.error('⚠️ Ошибка при закрытии соединения с MongoDB:', err.message);
