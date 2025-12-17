@@ -256,6 +256,44 @@ app.post('/bot-webhook', (req, res) => {
     }
 });
 
+
+// ==== ДОБАВЬТЕ ЭТОТ КОД ПОСЛЕ ВЕБХУКА ====
+app.post('/api/user-data', async (req, res) => {
+    try {
+      const { userId } = req.body;
+      console.log('🔍 [API] Запрос данных для userId:', userId);
+      
+      if (!userId) {
+        return res.status(400).json({ success: false, error: 'Требуется userId' });
+      }
+      
+      const user = await User.findOne({ telegramId: userId });
+      
+      if (!user) {
+        console.log('⚠️ [API] Пользователь не найден');
+        return res.status(404).json({ 
+          success: false, 
+          error: 'Пользователь не найден. Напишите боту /start' 
+        });
+      }
+      
+      console.log('✅ [API] Возвращаю данные для:', user.username);
+      res.json({
+        success: true,
+        user: {
+          telegramId: user.telegramId,
+          username: user.username,
+          coins: user.coins,
+          farm: user.farm
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ [API] Ошибка:', error);
+      res.status(500).json({ success: false, error: 'Ошибка сервера' });
+    }
+  });
+
 // ==================== 10. ЗАПУСК СЕРВЕРА ====================
 app.listen(PORT, '0.0.0.0', () => {
     console.log('🚀 Сервер запущен на порту ${PORT}');
