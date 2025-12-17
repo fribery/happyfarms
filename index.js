@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 
 const app = express();
 app.use(express.json());
+app.use(require('cors')());
 
 // ============ 1. КОНФИГУРАЦИЯ БОТА (РЕЖИМ WEBHOOK) ============
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -55,9 +56,9 @@ mongoose.connect(mongoUri)
                         username: msg.from.username
                     });
                     await user.save();
-                    await bot.sendMessage(chatId, 'Добро пожаловать на ферму! У вас ' + user.coins + ' монет.');
+                    await bot.sendMessage(chatId, `Добро пожаловать на ферму! У вас + ${user.coins} + монет.`);
                 } else {
-                    await bot.sendMessage(chatId, 'С возвращением! На вашем счету ' + user.coins + ' монет.');
+                    await bot.sendMessage(chatId, `С возвращением! На вашем счету + ${user.coins} + монет.`);
                 }
                 // Кнопка для открытия Mini App
                 await bot.sendMessage(chatId, 'Открыть ферму', {
@@ -77,6 +78,7 @@ mongoose.connect(mongoUri)
 
         // ============ 5. API ДЛЯ FRONTEND (MINI APP) ============
         // Важно: В реальном приложении здесь должна быть проверка подписи initData от Telegram!
+
         app.post('/api/user-data', async (req, res) => {
             try {
                 const userId = req.body.userId;
@@ -93,6 +95,7 @@ mongoose.connect(mongoUri)
         });
 
         // Эндпоинт для создания платежного счета (заглушка)
+
         app.post('/api/create-invoice', (req, res) => {
             console.log('Запрос на создание инвойса:', req.body);
             // Реализуйте логику создания инвойса через bot.sendInvoice(...)
@@ -131,6 +134,7 @@ mongoose.connect(mongoUri)
         // ============ 8. ЗАПУСК СЕРВЕРА ============
         const PORT = process.env.PORT || 8080;
         const server = app.listen(PORT, '0.0.0.0', () => {
+            console.log(`Сервер запущен на порту ${PORT}`);
             console.log('📡 Backend server is running on port ' + PORT);
             console.log('🌐 Локальный Health Check: http://localhost:' + PORT + '/');
             console.log('✅ Server initialization complete.');
