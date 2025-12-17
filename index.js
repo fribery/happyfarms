@@ -47,33 +47,35 @@ console.log('🤖 Бот инициализирован');
         bot.onText(/\/start/, async (msg) => {
             const chatId = msg.chat.id;
             const userId = msg.from.id;
+            const username = msg.from.username || 'фермер';
+            
             try {
-                let user = await User.findOne({ telegramId: userId });
-                if (!user) {
-                    user = new User({
-                        telegramId: userId,
-                        username: msg.from.username
-                    });
-                    await user.save();
-                    await bot.sendMessage(chatId, `Добро пожаловать на ферму! У вас + ${user.coins} + монет.`);
-                } else {
-                    await bot.sendMessage(chatId, `С возвращением! На вашем счету + ${user.coins} + монет.`);
-                }
-                // Кнопка для открытия Mini App
-                await bot.sendMessage(chatId, 'Открыть ферму', {
-                    reply_markup: {
-                        inline_keyboard: [[
-                            {
-                                text: '🌾 Открыть ферму',
-                                web_app: { url: process.env.MINI_APP_URL }
-                            }
-                        ]]
-                    }
+              console.log('🟢 /start от:', userId);
+              
+              // ВРЕМЕННО: Не обращаемся к базе, используем заглушку
+              // let user = await User.findOne({ telegramId: userId });
+              // if (!user) { ... }
+              
+              // Отправляем сообщение без данных из БД
+              await bot.sendMessage(chatId, `Привет, ${username}! Добро пожаловать. База данных временно недоступна.`);
+              
+              // Кнопка с Mini App
+              const miniAppUrl = process.env.MINI_APP_URL;
+              if (miniAppUrl) {
+                await bot.sendMessage(chatId, 'Открыть ферму:', {
+                  reply_markup: {
+                    inline_keyboard: [[
+                      { text: '🌾 Открыть ферму', web_app: { url: miniAppUrl } }
+                    ]]
+                  }
                 });
+              }
+              
             } catch (error) {
-                console.error('Ошибка в обработчике /start:', error);
+              console.error('Ошибка в /start:', error.message);
+              await bot.sendMessage(chatId, 'Ошибка: ' + error.message);
             }
-        });
+          });
 
         // ============ 5. API ДЛЯ FRONTEND (MINI APP) ============
         // Важно: В реальном приложении здесь должна быть проверка подписи initData от Telegram!
