@@ -13,7 +13,7 @@ app.use(require('cors')());
 // ==================== 2. ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ ====================
 const PORT = process.env.PORT || 8080;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const MONGO_URL = process.env.MONGO_URL || process.env.DATABASE_URL;
+const MONGO_URL = process.env.MONGO_URL;
 
 // Проверка обязательных переменных
 if (!BOT_TOKEN) {
