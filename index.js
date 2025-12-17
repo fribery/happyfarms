@@ -69,10 +69,10 @@ bot.onText(/\/start/, async (msg) => {
             });
             await user.save();
             console.log('🆕 Создан новый пользователь: ${userId}');
-            await bot.sendMessage(chatId, 'Добро пожаловать на ферму! У вас ${user.coins} монет.');
+            await bot.sendMessage(chatId, `Добро пожаловать на ферму! У вас ${user.coins} монет.`);
         } else {
             console.log('👋 Возвращение пользователя: ${userId}');
-            await bot.sendMessage(chatId, 'С возвращением, ${username}! На счету: ${user.coins} монет.');
+            await bot.sendMessage(chatId, `С возвращением, ${username || 'Фермер'}! На счету: ${user.coins} монет.`);
         }
 
         // Отправляем кнопку для открытия Mini App
