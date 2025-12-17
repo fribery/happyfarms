@@ -130,14 +130,6 @@ console.log('🤖 Бот инициализирован');
             }
         });
 
-        // ============ 8. ЗАПУСК СЕРВЕРА ============
-        const server = app.listen(PORT, '0.0.0.0', () => {
-            console.log(`Сервер запущен на порту ${PORT}`);
-            console.log('📡 Backend server is running on port ' + PORT);
-            console.log('🌐 Локальный Health Check: http://localhost:' + PORT + '/');
-            console.log('✅ Server initialization complete.');
-        });
-
         // ============ 9. ГРАЦИОЗНОЕ ЗАВЕРШЕНИЕ ============
         const gracefulShutdown = () => {
             console.log('🛑 Получен сигнал завершения, останавливаю сервер...');
@@ -294,12 +286,50 @@ app.post('/api/user-data', async (req, res) => {
     }
   });
 
+  // API для фронтенда
+app.post('/api/user-data', async (req, res) => {
+    try {
+      console.log('🔍 [API] Запрос /api/user-data. Тело:', req.body);
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ success: false, error: 'userId обязателен' });
+      }
+      
+      // Ищем пользователя
+      const user = await User.findOne({ telegramId: Number(userId) });
+      
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'Пользователь не найден. Напишите /start боту' 
+        });
+      }
+      
+      // Отправляем данные
+      res.json({
+        success: true,
+        user: {
+          telegramId: user.telegramId,
+          username: user.username,
+          coins: user.coins,
+          farm: user.farm
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Ошибка в /api/user-data:', error);
+      res.status(500).json({ success: false, error: 'Ошибка сервера' });
+    }
+  });
+
+
 // ==================== 10. ЗАПУСК СЕРВЕРА ====================
 app.listen(PORT, '0.0.0.0', () => {
-    console.log('🚀 Сервер запущен на порту ${PORT}');
-    console.log('🔗 Health Check: http://localhost:${PORT}/');
-    console.log('📨 Вебхук: /bot-webhook');
-    console.log('🎮 API для фронтенда: /api/user-data');
+    console.log(`🚀 Сервер запущен на порту ${PORT}`);
+    console.log(`🔗 Health Check: http://localhost:${PORT}/`);
+    console.log(`📨 Вебхук: /bot-webhook`);
+    console.log(`🎮 API для фронтенда: /api/user-data`);
 });
 
 // ==================== 11. ОБРАБОТКА ОШИБОК ====================
