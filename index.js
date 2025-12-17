@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(require('cors')());
 
 // ==================== 2. ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ ====================
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const MONGO_URI = process.env.MONGO_URL || process.env.DATABASE_URL;
 
