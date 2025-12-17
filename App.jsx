@@ -10,28 +10,30 @@ function App() {
   const [gameData, setGameData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Инициализация Mini App
-  useEffect(() => {
-    tg.ready(); // Сообщаем Telegram, что приложение готово[citation:6]
-    tg.expand(); // Разворачиваем на весь экран
-    fetchUserData();
-  }, []);
+useEffect(() => {
+  const initApp = async () => {
+    const tg = window.Telegram?.WebApp;
+    console.log('🔍 [FRONT] Шаг 1. Объект Telegram:', tg ? 'Найден' : 'Не найден');
 
-  // Запрос данных пользователя у бэкенда
-  const fetchUserData = async () => {
-    try {
-      // Отправляем на бэкенд initData для проверки подлинности
-      const response = await axios.post(`${API_URL}/api/user-data`, {
-        initData: tg.initData, // Безопасные данные для проверки[citation:6]
-        userId: user?.id
-      });
-      setGameData(response.data.user);
-    } catch (error) {
-      console.error('Failed to fetch user data:', error);
-    } finally {
-      setLoading(false);
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      console.log('✅ [FRONT] Шаг 2. Telegram WebApp инициализирован');
+      
+      // ============ ЭТА СТРОКА ДОЛЖНА БЫТЬ И РАБОТАТЬ ============
+      console.log('🔄 [FRONT] Шаг 3. Вызываю fetchUserData...');
+      await fetchUserData(tg); // <--- ЭТО САМАЯ ВАЖНАЯ СТРОКА
+      // ======================================================
+
+    } else {
+      console.warn('⚠️ [FRONT] Запуск вне Telegram, fetchUserData не вызывается');
     }
+    setLoading(false);
+    console.log('🏁 [FRONT] Шаг 4. Загрузка завершена.');
   };
+
+  initApp();
+}, []); // Пустой массив зависимостей
 
   // Функция "собрать урожай"
   const handleHarvest = async (vegetableType) => {

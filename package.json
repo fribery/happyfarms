@@ -8,10 +8,11 @@
     "set-webhook": "node setWebhook.js"
   },
   "dependencies": {
-      "dotenv": "^17.2.3",
-      "express": "^5.2.1",
-      "mongoose": "^9.0.1",
-      "node-telegram-bot-api": "^0.67.0"
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "mongoose": "^9.0.1",
+    "node-telegram-bot-api": "^0.67.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

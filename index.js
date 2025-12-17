@@ -1,34 +1,33 @@
+// ==================== 1. ИМПОРТЫ И НАСТРОЙКА ====================
 require('dotenv').config();
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const mongoose = require('mongoose');
+const cors = require('cors');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(require('cors')());
 
-// ============ 1. КОНФИГУРАЦИЯ БОТА (РЕЖИМ WEBHOOK) ============
-const token = process.env.TELEGRAM_BOT_TOKEN;
-if (!token) {
-    console.error('❌ FATAL: TELEGRAM_BOT_TOKEN не найден в переменных окружения.');
+// ==================== 2. ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ ====================
+const PORT = process.env.PORT || 3000;
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const MONGO_URI = process.env.MONGO_URL || process.env.DATABASE_URL;
+
+// Проверка обязательных переменных
+if (!BOT_TOKEN) {
+    console.error('❌ ОШИБКА: TELEGRAM_BOT_TOKEN не найден!');
     process.exit(1);
 }
-const bot = new TelegramBot(token);
-console.log('🤖 Бот инициализирован (режим вебхука)');
-
-// ============ 2. ПОДКЛЮЧЕНИЕ К БАЗЕ ДАННЫХ ============
-// Важно: используйте ту переменную, которую вы добавили в Railway (например, DATABASE_URL или MONGO_URL)
-const mongoUri = process.env.MONGO_URL_URL || process.env.MONGO_URL;
-if (!mongoUri) {
-    console.error('❌ FATAL: Переменная для подключения к MongoDB (DATABASE_URL/MONGO_URL) не найдена.');
+if (!MONGO_URI) {
+    console.error('❌ ОШИБКА: MONGO_URL или DATABASE_URL не найдены!');
     process.exit(1);
 }
 
-// Подключаемся к БД. Сервер запустим ПОСЛЕ успешного подключения.
-console.log('🔗 Устанавливаю соединение с MongoDB...');
-mongoose.connect(mongoUri)
-    .then(() => {
-        console.log('✅ MongoDB connected');
+// ==================== 3. ПОДКЛЮЧЕНИЕ К TELEGRAM ====================
+const bot = new TelegramBot(BOT_TOKEN);
+console.log('🤖 Бот инициализирован');
 
         // ============ 3. МОДЕЛЬ ПОЛЬЗОВАТЕЛЯ ============
         const userSchema = new mongoose.Schema({
@@ -132,7 +131,6 @@ mongoose.connect(mongoUri)
         });
 
         // ============ 8. ЗАПУСК СЕРВЕРА ============
-        const PORT = process.env.PORT || 8080;
         const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`Сервер запущен на порту ${PORT}`);
             console.log('📡 Backend server is running on port ' + PORT);
@@ -162,17 +160,115 @@ mongoose.connect(mongoUri)
         process.on('SIGTERM', () => clearInterval(keepAliveInterval));
         process.on('SIGINT', () => clearInterval(keepAliveInterval));
 
-    })
-    .catch((err) => {
-        // Если подключение к БД не удалось, сервер НЕ запускаем
-        console.error('❌ FATAL: Ошибка подключения к MongoDB:', err.message);
-        process.exit(1);
-    });
+// ==================== 6. КОМАНДА /START ДЛЯ БОТА ====================
+bot.onText(/\/start/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const username = msg.from.username;
 
-// ============ 10. ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ ОШИБОК ============
-process.on('uncaughtException', (error) => {
-    console.error('⚠️ CRITICAL: Непойманное исключение!', error);
+    try {
+        // Ищем или создаём пользователя
+        let user = await User.findOne({ telegramId: userId });
+        if (!user) {
+            user = new User({
+                telegramId: userId,
+                username: username,
+                coins: 100,
+                farm: { vegetables: {}, animals: {} }
+            });
+            await user.save();
+            console.log('🆕 Создан новый пользователь: ${userId}');
+            await bot.sendMessage(chatId, `Добро пожаловать на ферму! У вас ${user.coins} монет.`);
+        } else {
+            console.log('👋 Возвращение пользователя: ${userId}');
+            await bot.sendMessage(chatId, `С возвращением, ${username || 'Фермер'}! На счету: ${user.coins} монет.`);
+        }
+
+        // Отправляем кнопку для открытия Mini App
+        const miniAppUrl = process.env.MINI_APP_URL || 'https://ваш-фронтенд.vercel.app';
+        await bot.sendMessage(chatId, 'Открыть ферму:', {
+            reply_markup: {
+                inline_keyboard: [[
+                    {
+                        text: '🌾 Открыть ферму',
+                        web_app: { url: miniAppUrl }
+                    }
+                ]]
+            }
+        });
+
+    } catch (error) {
+        console.error('Ошибка в /start:', error);
+        await bot.sendMessage(chatId, 'Произошла ошибка. Попробуйте позже.');
+    }
 });
+
+// ==================== 7. API ДЛЯ ФРОНТЕНДА ====================
+// Эндпоинт для получения данных пользователя
+app.post('/api/user-data', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    console.log('🔍 [API] Поиск пользователя для userId:', userId);
+
+    // Пытаемся найти пользователя по telegramId (основной способ)
+    let user = await User.findOne({ telegramId: userId });
+
+    // Если не нашли, можно попробовать найти по другому полю,
+    // например, по username, если он передаётся вместе с userId
+    // if (!user) {
+    //   user = await User.findOne({ username: someUsername });
+    // }
+
+    if (!user) {
+      console.log('⚠️ [API] Пользователь не найден в БД по telegramId:', userId);
+      // Можно создать нового пользователя "на лету", если нужно
+      // user = new User({ telegramId: userId, coins: 100 });
+      // await user.save();
+      return res.status(404).json({ success: false, error: 'Пользователь не найден' });
+    }
+
+    console.log('✅ [API] Пользователь найден:', user.telegramId);
+    res.json({ success: true, user: user });
+  } catch (error) {
+    console.error('❌ [API] Ошибка:', error);
+    res.status(500).json({ success: false, error: 'Ошибка сервера' });
+  }
+});
+
+// ==================== 8. HEALTH CHECK (ОБЯЗАТЕЛЬНО!) ====================
+app.get('/', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        message: 'Farm Bot API работает',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// ==================== 9. ВЕБХУК ДЛЯ TELEGRAM ====================
+// Telegram будет отправлять сюда все обновления
+app.post('/bot-webhook', (req, res) => {
+    try {
+        bot.processUpdate(req.body);
+        res.sendStatus(200);
+    } catch (error) {
+        console.error('Ошибка в вебхуке:', error);
+        res.sendStatus(500);
+    }
+});
+
+// ==================== 10. ЗАПУСК СЕРВЕРА ====================
+app.listen(PORT, '0.0.0.0', () => {
+    console.log('🚀 Сервер запущен на порту ${PORT}');
+    console.log('🔗 Health Check: http://localhost:${PORT}/');
+    console.log('📨 Вебхук: /bot-webhook');
+    console.log('🎮 API для фронтенда: /api/user-data');
+});
+
+// ==================== 11. ОБРАБОТКА ОШИБОК ====================
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('⚠️ CRITICAL: Необработанный rejection промиса:', reason);
+    console.error('⚠️ Необработанный rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('⚠️ Непойманное исключение:', error);
 });
