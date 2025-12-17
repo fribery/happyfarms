@@ -110,7 +110,7 @@ console.log('🤖 Бот инициализирован');
         });
 
         // ============ 6. HEALTH CHECK (КРИТИЧЕСКИ ВАЖНО ДЛЯ RAILWAY) ============
-        app.get('/', (req, res) => {
+        app.get('/api/user-data', (req, res) => {
             console.log('✅ GET / — Health Check passed!');
             res.json({
                 status: 'ok',
