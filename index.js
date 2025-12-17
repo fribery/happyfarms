@@ -13,14 +13,14 @@ app.use(require('cors')());
 // ==================== 2. ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ ====================
 const PORT = process.env.PORT || 8080;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const MONGO_URI = process.env.MONGO_URL || process.env.DATABASE_URL;
+const MONGO_URL = process.env.MONGO_URL || process.env.DATABASE_URL;
 
 // Проверка обязательных переменных
 if (!BOT_TOKEN) {
     console.error('❌ ОШИБКА: TELEGRAM_BOT_TOKEN не найден!');
     process.exit(1);
 }
-if (!MONGO_URI) {
+if (!MONGO_URL) {
     console.error('❌ ОШИБКА: MONGO_URL или DATABASE_URL не найдены!');
     process.exit(1);
 }

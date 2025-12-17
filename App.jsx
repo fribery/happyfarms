@@ -3,7 +3,7 @@ import { useTelegram } from './hooks/useTelegram'; // Хук из [citation:6]
 import axios from 'axios';
 import './App.css';
 
-const API_URL = 'happyfarms-production.up.railway.app/api'; // Адрес вашего бэкенда
+const API_URL = 'https://happyfarms-production.up.railway.app/api'; // Адрес вашего бэкенда
 
 function App() {
   const { tg, user } = useTelegram();
