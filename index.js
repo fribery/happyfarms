@@ -110,7 +110,7 @@ console.log('🤖 Бот инициализирован');
         });
 
         // ============ 6. HEALTH CHECK (КРИТИЧЕСКИ ВАЖНО ДЛЯ RAILWAY) ============
-        app.get('/api/user-data', (req, res) => {
+        app.get('/', (req, res) => {
             console.log('✅ GET / — Health Check passed!');
             res.json({
                 status: 'ok',
@@ -215,15 +215,6 @@ app.post('/api/user-data', async (req, res) => {
   }
 });
 
-// ==================== 8. HEALTH CHECK (ОБЯЗАТЕЛЬНО!) ====================
-app.get('/', (req, res) => {
-    res.json({ 
-        status: 'ok', 
-        message: 'Farm Bot API работает',
-        timestamp: new Date().toISOString()
-    });
-});
-
 // ==================== 9. ВЕБХУК ДЛЯ TELEGRAM ====================
 // Telegram будет отправлять сюда все обновления
 app.post('/bot-webhook', (req, res) => {
@@ -236,7 +227,33 @@ app.post('/bot-webhook', (req, res) => {
     }
 });
 
-
+// Добавьте этот маршрут:
+app.get('/api/user-data', (req, res) => {
+    try {
+      // Здесь вы можете получить данные из базы данных или другого источника
+      const userData = {
+        id: 1,
+        name: "Иван Иванов",
+        email: "ivan@example.com",
+        status: "active",
+        createdAt: new Date().toISOString()
+      };
+      
+      // Отправляем данные клиенту
+      res.status(200).json({
+        success: true,
+        data: userData,
+        message: "Данные пользователя получены успешно"
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Ошибка при получении данных пользователя",
+        error: error.message
+      });
+    }
+  });
+  
 // ==== ДОБАВЬТЕ ЭТОТ КОД ПОСЛЕ ВЕБХУКА ====
 app.post('/api/user-data', async (req, res) => {
     try {
